@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+reports/*.html
+rules/rules.json
+src/code_validator/__pycache__/
+src/code_validator/*/__pycache__/
