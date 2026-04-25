@@ -145,6 +145,12 @@ def prompt_yes_no(input_func, out: TextIO, prompt: str, default: bool = True) ->
 
 
 def select_folders(project_root: Path, input_func, out: TextIO) -> FolderSelection:
+    print("Folder mode guide:", file=out)
+    print("  - Type a single letter and press Enter.", file=out)
+    print("  - a = include only files directly inside that folder", file=out)
+    print("  - r = include that folder and every child folder under it", file=out)
+    print("  - i = include that folder, then choose child folders one by one", file=out)
+    print("  - s = skip that folder", file=out)
     include_root_files = prompt_yes_no(input_func, out, "Include supported files from the project root?", default=True)
     shallow_dirs: list[Path] = []
     recursive_dirs: list[Path] = []
@@ -192,6 +198,11 @@ def build_manual_selection(results: list[FileResult], input_func, out: TextIO) -
         print("No safe autofix candidates were found in manual mode.", file=out)
         return {}
 
+    print("Manual mode guide:", file=out)
+    print("  - Enter comma-separated numbers like 1,2,3", file=out)
+    print("  - Spaces are allowed, so 1, 2, 3 also works", file=out)
+    print("  - Enter all to select every item in the current list", file=out)
+    print("  - Choose files first, then choose rule ids", file=out)
     print("Fixable files:", file=out)
     for index, item in enumerate(fixable_files, start=1):
         print(f"  {index}. {item.relative_path}", file=out)
@@ -199,7 +210,7 @@ def build_manual_selection(results: list[FileResult], input_func, out: TextIO) -
     chosen_files = prompt_index_selection(
         input_func,
         out,
-        "Select files to fix by number or 'all'",
+        "Select files to fix by number or 'all' (example: 1,2,3 or all)",
         len(fixable_files),
     )
     selected_files = fixable_files if chosen_files is None else [fixable_files[index - 1] for index in sorted(chosen_files)]
@@ -222,7 +233,7 @@ def build_manual_selection(results: list[FileResult], input_func, out: TextIO) -
     chosen_rules = prompt_index_selection(
         input_func,
         out,
-        "Select rule ids to apply by number or 'all'",
+        "Select rule ids to apply by number or 'all' (example: 1,2,3 or all)",
         len(available_rules),
     )
     selected_rule_ids = set(available_rules) if chosen_rules is None else {available_rules[index - 1] for index in chosen_rules}
@@ -237,7 +248,7 @@ def prompt_index_selection(input_func, out: TextIO, prompt: str, max_index: int)
         try:
             numbers = {int(item.strip()) for item in value.split(",") if item.strip()}
         except ValueError:
-            print("Please enter comma-separated numbers or 'all'.", file=out)
+            print("Please enter comma-separated numbers such as 1,2,3 or use 'all'.", file=out)
             continue
         if not numbers:
             print("Please choose at least one item.", file=out)

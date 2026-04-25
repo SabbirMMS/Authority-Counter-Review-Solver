@@ -1,6 +1,8 @@
 # Authority Counter Review Solver
 
-> clone URL:
+Repository name: `authority-counter-review-solver`
+
+Clone URL:
 
 ```bash
 git clone https://github.com/SabbirMMS/authority-counter-review-solver.git
@@ -105,6 +107,12 @@ For each folder you can choose:
 
 It also asks whether root-level files should be included.
 
+Folder input guide:
+
+- type one letter only: `a`, `r`, `i`, or `s`
+- press Enter after each choice
+- use `i` when you want to keep drilling into child folders manually
+
 ### Manual
 
 Scans first, then shows:
@@ -113,6 +121,14 @@ Scans first, then shows:
 - fixable rule ids
 
 You choose which files and which rule ids should be applied. This is the safest mode when you want tight control.
+
+Manual selection guide:
+
+- enter comma-separated numbers like `1,2,3`
+- spaces are also accepted, so `1, 2, 3` works
+- enter `all` to select every item in the current list
+- first you select files, then you select rule ids
+- ranges like `1-5` are not supported in the current CLI
 
 ## Optional Flags
 
@@ -216,13 +232,26 @@ Fixable files:
   1. src/app.js
   2. src/utils/helpers.js
 
-Select files to fix by number or 'all': 1
+Select files to fix by number or 'all' (example: 1,2,3 or all): 1,2
 Fixable rule ids:
   1. global-no-trailing-whitespace
   2. global-inner-delimiter-spacing
 
-Select rule ids to apply by number or 'all': all
+Select rule ids to apply by number or 'all' (example: 1,2,3 or all): all
 Apply these safe fixes now? [Y/n]: y
+```
+
+Another valid manual example:
+
+```text
+Select files to fix by number or 'all' (example: 1,2,3 or all): 1, 2, 3, 4, 5
+Select rule ids to apply by number or 'all' (example: 1,2,3 or all): 1,3,6
+```
+
+If you want every listed file or every listed rule id, just type:
+
+```text
+all
 ```
 
 Custom rules:
