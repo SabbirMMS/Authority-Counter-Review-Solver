@@ -1,0 +1,24 @@
+{
+  "metadata": {
+    "version": 1,
+    "source": "test"
+  },
+  "global": [
+    {
+      "id": "global-max-line-length",
+      "type": "max_line_length",
+      "description": "Override line length limit",
+      "value": 80
+    }
+  ],
+  "languages": {
+    "javascript": [
+      {
+        "id": "js-no-debugger",
+        "type": "forbid_regex",
+        "description": "Debugger is forbidden",
+        "pattern": "\\bdebugger\\b"
+      }
+    ]
+  }
+}
