@@ -1,6 +1,16 @@
-# Counter Review Solver
+# Authority Counter Review Solver
+
+> clone URL:
+
+```bash
+git clone https://github.com/SabbirMMS/authority-counter-review-solver.git
+cd authority-counter-review-solver
+```
 
 Interactive Python fixer for projects that are being checked by the authority-style reviewer in `code-review-agent-main`.
+
+GitHub profile: [github.com/SabbirMMS](https://github.com/SabbirMMS)  
+Portfolio: [sabbirms.github.io](https://sabbirms.github.io)
 
 It mirrors the reviewer’s real rule families:
 
@@ -46,6 +56,33 @@ The script will ask for:
    - `folder`
    - `manual`
 3. Confirmation before writing changes
+
+## Quick Start
+
+Clone the repo:
+
+```bash
+git clone https://github.com/SabbirMMS/authority-counter-review-solver.git
+cd authority-counter-review-solver
+```
+
+Run the interactive solver:
+
+```bash
+python3 main.py
+```
+
+Run preview only against a project:
+
+```bash
+python3 main.py --project /path/to/project --mode bulk --preview-only
+```
+
+Run the test suite:
+
+```bash
+python3 -m unittest discover -s tests
+```
 
 ## Modes
 
@@ -98,6 +135,116 @@ Examples:
 python3 main.py --project /work/app --mode bulk --preview-only
 python3 main.py --project /work/app --mode manual
 python3 main.py --project /work/app --mode bulk --rules custom-rules.json
+```
+
+## Command Examples
+
+Bulk preview:
+
+```bash
+python3 main.py --project /work/app --mode bulk --preview-only
+```
+
+Expected output sample:
+
+```text
+Preview summary
+  Files scanned: 18
+  Files with proposed changes: 12
+  Violations before fixes: 1113
+  Violations after safe fixes: 15
+  Rule counts before:
+    - global-no-trailing-whitespace: 3
+    - global-max-line-length: 12
+  Remaining rule counts after safe fixes:
+    - global-max-line-length: 14
+
+Report written to: /path/to/reports/counter-solver-report-YYYYMMDD-HHMMSS.json
+
+Run summary
+  Files scanned: 18
+  Files changed: 12
+  Remaining violations: 15
+  Skipped unsafe fixes: 1
+```
+
+Bulk apply:
+
+```bash
+python3 main.py --project /work/app --mode bulk
+```
+
+Expected interactive flow sample:
+
+```text
+Apply these safe fixes now? [Y/n]: y
+Report written to: /path/to/reports/counter-solver-report-YYYYMMDD-HHMMSS.json
+
+Run summary
+  Files scanned: 18
+  Files changed: 12
+  Remaining violations: 15
+  Skipped unsafe fixes: 1
+```
+
+Folder mode:
+
+```bash
+python3 main.py --project /work/app --mode folder
+```
+
+Expected interactive flow sample:
+
+```text
+Include supported files from the project root? [Y/n]: y
+src -> [a] allow this folder, [r] allow folder + all children, [i] inspect children individually, [s] skip: i
+src/components -> [a] allow this folder, [r] allow folder + all children, [i] inspect children individually, [s] skip: r
+src/utils -> [a] allow this folder, [r] allow folder + all children, [i] inspect children individually, [s] skip: s
+tests -> [a] allow this folder, [r] allow folder + all children, [i] inspect children individually, [s] skip: a
+```
+
+Manual mode:
+
+```bash
+python3 main.py --project /work/app --mode manual
+```
+
+Expected interactive flow sample:
+
+```text
+Fixable files:
+  1. src/app.js
+  2. src/utils/helpers.js
+
+Select files to fix by number or 'all': 1
+Fixable rule ids:
+  1. global-no-trailing-whitespace
+  2. global-inner-delimiter-spacing
+
+Select rule ids to apply by number or 'all': all
+Apply these safe fixes now? [Y/n]: y
+```
+
+Custom rules:
+
+```bash
+python3 main.py --project /work/app --mode bulk --rules custom-rules.json
+```
+
+Test run:
+
+```bash
+python3 -m unittest discover -s tests
+```
+
+Expected output sample:
+
+```text
+.........
+----------------------------------------------------------------------
+Ran 9 tests in 0.009s
+
+OK
 ```
 
 ## Custom Rules
@@ -198,3 +345,13 @@ python3 -m unittest discover -s tests
 - Safe autofix is intentionally conservative around regex rules and structural rewrites.
 - Line wrapping only happens when a safe space exists before the configured limit.
 - Common heavy folders such as `.git`, `node_modules`, `vendor`, `dist`, `build`, `.venv`, and `__pycache__` are skipped automatically.
+
+## Author
+
+Sabbir MMS  
+GitHub: [github.com/SabbirMMS](https://github.com/SabbirMMS)  
+Portfolio: [sabbirms.github.io](https://sabbirms.github.io)
+
+## Copyright
+
+Copyright (c) 2026 Sabbir MMS. All rights reserved.
