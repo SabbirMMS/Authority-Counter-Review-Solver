@@ -1,0 +1,132 @@
+{
+  "metadata": {
+    "version": 2,
+    "source": "manual",
+    "last_updated": "2026-04-26"
+  },
+  "global": [
+    {
+      "id": "global-no-trailing-whitespace",
+      "type": "no_trailing_whitespace",
+      "description": "Lines must not have trailing whitespace."
+    },
+    {
+      "id": "global-no-tabs",
+      "type": "forbid_regex",
+      "description": "Use spaces for indentation, not tabs.",
+      "pattern": "\t"
+    }
+  ],
+  "languages": {
+    "python": [
+      {
+        "id": "py-max-line-length",
+        "type": "max_line_length",
+        "description": "Python line length limit",
+        "value": 100
+      },
+      {
+        "id": "py-no-print",
+        "type": "forbid_regex",
+        "description": "Do not use print() statements in production code. Use logging instead.",
+        "pattern": "print\\s*\\("
+      },
+      {
+        "id": "py-require-docstring",
+        "type": "require_regex",
+        "description": "Python files should contain at least one docstring.",
+        "pattern": "\"\"\"[\\s\\S]*\"\"\"",
+        "flags": "m"
+      },
+      {
+        "id": "py-inner-spacing",
+        "type": "inner_delimiter_spacing",
+        "description": "Enforce spacing inside delimiters for Python.",
+        "value": ["()", "[]", "{}"]
+      }
+    ],
+    "javascript": [
+      {
+        "id": "js-max-line-length",
+        "type": "max_line_length",
+        "description": "JS line length limit",
+        "value": 120
+      },
+      {
+        "id": "js-no-console-log",
+        "type": "forbid_regex",
+        "description": "Avoid console.log in production.",
+        "pattern": "console\\.log\\s*\\("
+      },
+      {
+        "id": "js-inner-spacing",
+        "type": "inner_delimiter_spacing",
+        "description": "Enforce spacing inside delimiters for JS.",
+        "value": ["()", "[]", "{}"]
+      }
+    ],
+    "typescript": [
+      {
+        "id": "ts-max-line-length",
+        "type": "max_line_length",
+        "description": "TS line length limit",
+        "value": 120
+      },
+      {
+        "id": "ts-no-any",
+        "type": "forbid_regex",
+        "description": "Avoid using 'any' type.",
+        "pattern": ":\\s*any\\b"
+      }
+    ],
+    "php": [
+      {
+        "id": "php-max-line-length",
+        "type": "max_line_length",
+        "description": "PHP line length limit",
+        "value": 120
+      },
+      {
+        "id": "php-no-eval",
+        "type": "forbid_regex",
+        "description": "Never use eval().",
+        "pattern": "eval\\s*\\("
+      },
+      {
+        "id": "php-no-closing-tag",
+        "type": "forbid_regex",
+        "description": "Avoid closing PHP tags at the end of files.",
+        "pattern": "\\?>\\s*$",
+        "flags": "m"
+      }
+    ],
+    "go": [
+      {
+        "id": "go-max-line-length",
+        "type": "max_line_length",
+        "description": "Go line length limit",
+        "value": 120
+      },
+      {
+        "id": "go-no-panic",
+        "type": "forbid_regex",
+        "description": "Avoid using panic().",
+        "pattern": "panic\\s*\\("
+      }
+    ],
+    "java": [
+      {
+        "id": "java-max-line-length",
+        "type": "max_line_length",
+        "description": "Java line length limit",
+        "value": 120
+      },
+      {
+        "id": "java-no-system-out",
+        "type": "forbid_regex",
+        "description": "Use a logger instead of System.out.println.",
+        "pattern": "System\\.out\\.print"
+      }
+    ]
+  }
+}
