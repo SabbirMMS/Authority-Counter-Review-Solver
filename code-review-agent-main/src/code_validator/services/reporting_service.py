@@ -19,11 +19,15 @@ class HtmlReportService:
     def __init__(self, output_dir: Path) -> None:
         self._output_dir = output_dir
 
-    def generate(self, result: ValidationResult, is_employee: bool) -> ReportArtifact:
+    def generate(
+        self,
+        result: ValidationResult,
+        is_employee: bool,
+        signature_html: str = "",
+    ) -> ReportArtifact:
         self._output_dir.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
         safe_repo = result.repo.replace("/", "_")
-        
         safe_branch = result.branch.replace("/", "_")
         filename = f"validation-report-{safe_repo}-{safe_branch}-{stamp}.html"
         path = self._output_dir / filename
@@ -112,17 +116,19 @@ class HtmlReportService:
     }}
     .file-table-wrap {{ padding: 0 10px 10px; }}
     .path {{ font-family: "IBM Plex Mono", "Cascadia Code", monospace; font-size: 12px; word-break: break-all; }}
-    table {{ width: 100%; border-collapse: collapse; }}
-    th, td {{ padding: 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 13px; }}
-    th {{ background: #f9fcff; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #335475; }}
-    tr:last-child td {{ border-bottom: none; }}
+    .violations-table {{ width: 100%; border-collapse: collapse; }}
+    .violations-table th, .violations-table td {{ padding: 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 13px; }}
+    .violations-table th {{ background: #f9fcff; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #335475; }}
+    .violations-table tr:last-child td {{ border-bottom: none; }}
     .line-chip {{ display: inline-block; padding: 2px 8px; border-radius: 999px; background: #eef5ff; border: 1px solid #cadef4; font-weight: 700; }}
     .open-link {{ color: var(--accent); text-decoration: none; font-weight: 700; }}
     .open-link:hover {{ text-decoration: underline; }}
     .muted {{ color: var(--muted); }}
+    .signature-section {{ margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); overflow-x: auto; }}
+    .signature-section table {{ width: auto; border-collapse: collapse; }}
     @media (max-width: 680px) {{
       .title {{ font-size: 19px; }}
-      th, td {{ padding: 8px; font-size: 12px; }}
+      .violations-table th, .violations-table td {{ padding: 8px; font-size: 12px; }}
     }}
   </style>
 </head>
@@ -146,12 +152,12 @@ class HtmlReportService:
       <h2>Violation Details</h2>
       {self._render_tables(result.repo, result.commit_sha, grouped)}
       <p class=\"muted\">Generated at {datetime.now(timezone.utc).isoformat()}</p>
+      {self._render_signature(signature_html)}
     </div>
   </div>
 </body>
 </html>
 """
-        # Ensure parent directory exists (in case branch contained path separators)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(html, encoding="utf-8")
         return ReportArtifact(html_path=path)
@@ -174,41 +180,52 @@ class HtmlReportService:
                 line = str(v.line_number) if v.line_number is not None else "-"
                 link = self._github_file_link(repo, commit_sha, path, v.line_number)
                 rows.append(
-            "<tr>"
-            f"<td>{escape(v.rule_id)}</td>"
-            f"<td><span class=\"line-chip\">{line}</span></td>"
-            f"<td>{escape(v.message)}</td>"
+                    "<tr>"
+                    f"<td>{escape(v.rule_id)}</td>"
+                    f"<td><span class=\"line-chip\">{line}</span></td>"
+                    f"<td>{escape(v.message)}</td>"
                     f"<td><a class=\"open-link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"{escape(link, quote=True)}\">Open</a></td>"
-            "</tr>"
+                    "</tr>"
                 )
             table = (
-              "<div class=\"file-card\">"
-              "<details class=\"file-accordion\">"
-              "<summary class=\"file-summary\">"
-              "<div class=\"summary-left\">"
-              "<span class=\"chev\">&#9656;</span>"
-              f"<span class=\"path\">{escape(path)}</span>"
-              "</div>"
-              "<div class=\"summary-right\">"
-              f"<span class=\"count-chip\">{len(items)} violations</span>"
+                "<div class=\"file-card\">"
+                "<details class=\"file-accordion\">"
+                "<summary class=\"file-summary\">"
+                "<div class=\"summary-left\">"
+                "<span class=\"chev\">&#9656;</span>"
+                f"<span class=\"path\">{escape(path)}</span>"
+                "</div>"
+                "<div class=\"summary-right\">"
+                f"<span class=\"count-chip\">{len(items)} violations</span>"
                 f"<a class=\"open-link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"{escape(self._github_file_link(repo, commit_sha, path, None), quote=True)}\">Open File</a>"
-              "</div>"
-              "</summary>"
-              "<div class=\"file-table-wrap\">"
-              "<table><thead><tr><th>Rule ID</th><th>Line</th><th>Message</th><th>GitHub</th></tr></thead><tbody>"
-              + "".join(rows)
-              + "</tbody></table>"
-              "</div>"
-              "</details>"
-              "</div>"
+                "</div>"
+                "</summary>"
+                "<div class=\"file-table-wrap\">"
+                "<table class=\"violations-table\"><thead><tr><th>Rule ID</th><th>Line</th><th>Message</th><th>GitHub</th></tr></thead><tbody>"
+                + "".join(rows)
+                + "</tbody></table>"
+                "</div>"
+                "</details>"
+                "</div>"
             )
             chunks.append(table)
         return "".join(chunks)
 
     @staticmethod
+    def _render_signature(signature_html: str) -> str:
+        if not signature_html.strip():
+            return ""
+        return (
+            "<div class=\"signature-section\">"
+            "<!--EMAIL_SIGNATURE-->"
+            + signature_html
+            + "</div>"
+        )
+
+    @staticmethod
     def _github_file_link(repo: str, git_ref: str, file_path: str, line_number: int | None) -> str:
-      quoted_repo = quote(repo, safe="/")
-      quoted_ref = quote(git_ref, safe="")
-      quoted_path = quote(file_path, safe="/")
-      anchor = f"#L{line_number}" if line_number else ""
-      return f"https://github.com/{quoted_repo}/blob/{quoted_ref}/{quoted_path}{anchor}"
+        quoted_repo = quote(repo, safe="/")
+        quoted_ref = quote(git_ref, safe="")
+        quoted_path = quote(file_path, safe="/")
+        anchor = f"#L{line_number}" if line_number else ""
+        return f"https://github.com/{quoted_repo}/blob/{quoted_ref}/{quoted_path}{anchor}"

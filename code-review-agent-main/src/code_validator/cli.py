@@ -13,6 +13,7 @@ from code_validator.services.commit_validation_service import (
 )
 from code_validator.services.email_service import EmailService
 from code_validator.services.reporting_service import HtmlReportService
+from code_validator.services.signature_service import SignatureContext, SignatureTemplateService
 from code_validator.validators.text_validators import (
     InnerDelimiterSpacingValidator,
     LineLengthValidator,
@@ -93,8 +94,23 @@ def run() -> int:
 
     is_employee = employee_registry.is_employee_identity(result.author_login, result.author_email)
 
+    signature_service = SignatureTemplateService(
+        template_path=settings.signature_template_path,
+        context=SignatureContext(
+            name=settings.email_signature_name,
+            designation=settings.email_signature_designation,
+            email=settings.email_signature_email,
+            phone=settings.email_signature_phone,
+        ),
+    )
+    signature_html = signature_service.render()
+
     report_service = HtmlReportService(output_dir=Path("reports"))
-    report = report_service.generate(result=result, is_employee=is_employee)
+    report = report_service.generate(
+        result=result,
+        is_employee=is_employee,
+        signature_html=signature_html,
+    )
     print(f"Report: {report.html_path}")
 
     if settings.report_email:
@@ -125,6 +141,7 @@ def run() -> int:
                     cc_emails=sorted(settings.cc_emails),
                     subject=subject,
                     html_content=html_content,
+                    signature_html=signature_html,
                 )
                 if settings.cc_emails:
                     print(

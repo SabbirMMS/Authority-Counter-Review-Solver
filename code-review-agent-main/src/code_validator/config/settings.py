@@ -24,6 +24,11 @@ class AppSettings:
     smtp_password: str | None
     smtp_from_email: str | None
     smtp_use_tls: bool
+    signature_template_path: Path
+    email_signature_name: str
+    email_signature_designation: str
+    email_signature_email: str
+    email_signature_phone: str
     default_repo: str | None
     default_branch: str
 
@@ -38,6 +43,7 @@ def load_settings(env_path: str | None = None) -> AppSettings:
     load_dotenv(dotenv_path=env_path)
 
     rules_path = Path(os.getenv("RULES_PATH", "rules/rules.json"))
+    signature_template_path = Path(os.getenv("SIGNATURE_TEMPLATE_PATH", "signature.html"))
 
     return AppSettings(
         github_token=os.getenv("GITHUB_TOKEN", "").strip(),
@@ -55,6 +61,11 @@ def load_settings(env_path: str | None = None) -> AppSettings:
         smtp_password=os.getenv("SMTP_PASSWORD", "").strip() or None,
         smtp_from_email=os.getenv("SMTP_FROM_EMAIL", "").strip() or None,
         smtp_use_tls=os.getenv("SMTP_USE_TLS", "true").strip().lower() in {"1", "true", "yes"},
+        signature_template_path=signature_template_path,
+        email_signature_name=os.getenv("EMAIL_SIGNATURE_NAME", "").strip(),
+        email_signature_designation=os.getenv("EMAIL_SIGNATURE_DESIGNATION", "").strip(),
+        email_signature_email=os.getenv("EMAIL_SIGNATURE_EMAIL", "").strip(),
+        email_signature_phone=os.getenv("EMAIL_SIGNATURE_PHONE", "").strip(),
         default_repo=os.getenv("DEFAULT_REPO", "").strip() or None,
         default_branch=os.getenv("DEFAULT_BRANCH", "main").strip(),
     )

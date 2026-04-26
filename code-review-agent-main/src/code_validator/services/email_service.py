@@ -27,8 +27,10 @@ class EmailService:
         cc_emails: list[str],
         subject: str,
         html_content: str,
+        signature_html: str = "",
     ) -> None:
-        msg = MIMEText(html_content, "html", "utf-8")
+        final_html = self._append_signature_if_missing(html_content, signature_html)
+        msg = MIMEText(final_html, "html", "utf-8")
         msg["Subject"] = subject
         msg["From"] = self._from_email
         msg["To"] = to_email
@@ -43,3 +45,13 @@ class EmailService:
             if self._username and self._password:
                 smtp.login(self._username, self._password)
             smtp.sendmail(self._from_email, recipients, msg.as_string())
+
+    @staticmethod
+    def _append_signature_if_missing(html_content: str, signature_html: str) -> str:
+        if not signature_html.strip() or "<!--EMAIL_SIGNATURE-->" in html_content:
+            return html_content
+
+        signature_block = f"<div><!--EMAIL_SIGNATURE-->{signature_html}</div>"
+        if "</body>" in html_content:
+            return html_content.replace("</body>", f"{signature_block}</body>", 1)
+        return html_content + signature_block
