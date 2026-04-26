@@ -218,6 +218,7 @@ def fix_no_tabs(
             line,
             in_block_comment,
             lambda chunk: chunk.replace("\t", "    "),
+            language=language,
         )
         if updated != line:
             changed = True
@@ -277,7 +278,7 @@ def fix_comma_spacing(
     updated_lines: list[str] = []
     in_block_comment = False
     for line in content.splitlines():
-        updated, in_block_comment = transform_code_segments(line, in_block_comment, _normalize_comma_segment)
+        updated, in_block_comment = transform_code_segments(line, in_block_comment, _normalize_comma_segment, language=language)
         if updated != line:
             changed = True
         updated_lines.append(updated)
@@ -285,21 +286,26 @@ def fix_comma_spacing(
 
 
 def _normalize_assignment_segment(segment: str) -> str:
+    if not segment:
+        return segment
     leading_match = re.match(r"^\s*", segment)
     leading = leading_match.group(0) if leading_match else ""
     body = segment[len(leading):]
-    replacements = (
-        (r"\s*===\s*", " === "),
-        (r"\s*!==\s*", " !== "),
-        (r"\s*==\s*", " == "),
-        (r"\s*!=\s*", " != "),
-        (r"\s*<=\s*", " <= "),
-        (r"\s*>=\s*", " >= "),
-        (r"(?<![<>=!])\s*=\s*(?![=>])", " = "),
-    )
-    updated = body
-    for pattern, replacement in replacements:
-        updated = re.sub(pattern, replacement, updated)
+
+    # Use a single-pass regex to avoid splitting multi-character operators.
+    # Order is important: longest patterns must come first.
+    operators = [
+        r"===", r"!==", r"\*\*=", r"<<=", r">>=", r"//=", r"\?\?=", r"\|\|=", r"&&=",
+        r"==", r"!=", r"<=", r">=", r"\+=", r"-=", r"\*=", r"/=", r"%=", r"&=", r"\|=", r"\^=", r"=>", r"->",
+        r"="
+    ]
+    pattern = r"\s*(?P<op>" + "|".join(operators) + r")\s*"
+
+    def repl(match: re.Match[str]) -> str:
+        return f" {match.group('op')} "
+
+    updated = re.sub(pattern, repl, body)
+    # Normalize multiple spaces into one (only between non-space characters)
     updated = re.sub(r"(?<=\S) {2,}(?=\S)", " ", updated)
     return f"{leading}{updated}"
 
@@ -317,19 +323,19 @@ def fix_assignment_spacing(
     updated_lines: list[str] = []
     in_block_comment = False
     for line in content.splitlines():
-        updated, in_block_comment = transform_code_segments(line, in_block_comment, _normalize_assignment_segment)
+        updated, in_block_comment = transform_code_segments(line, in_block_comment, _normalize_assignment_segment, language=language)
         if updated != line:
             changed = True
         updated_lines.append(updated)
     return join_lines(updated_lines, newline, trailing), changed, None
 
 
-def _fix_inner_spacing_for_line(line: str, enabled_openers: set[str], in_block_comment: bool) -> tuple[str, bool, bool]:
+def _fix_inner_spacing_for_line(line: str, enabled_openers: set[str], in_block_comment: bool, language: str) -> tuple[str, bool, bool]:
     changed = False
     updated = line
     start_state = in_block_comment
 
-    mask, end_state = code_mask(updated, start_state)
+    mask, end_state = code_mask(updated, start_state, language=language)
     idx = 0
     pairs = {"(": ")", "[": "]", "{": "}"}
     while idx < len(updated):
@@ -348,10 +354,10 @@ def _fix_inner_spacing_for_line(line: str, enabled_openers: set[str], in_block_c
         if idx + 1 >= len(updated) or updated[idx + 1] != " ":
             updated = f"{updated[:idx + 1]} {updated[idx + 1:]}"
             changed = True
-            mask, _ = code_mask(updated, start_state)
+            mask, _ = code_mask(updated, start_state, language=language)
         idx += 1
 
-    mask, _ = code_mask(updated, start_state)
+    mask, _ = code_mask(updated, start_state, language=language)
     idx = 0
     closers = {pairs[item]: item for item in enabled_openers}
     while idx < len(updated):
@@ -370,7 +376,7 @@ def _fix_inner_spacing_for_line(line: str, enabled_openers: set[str], in_block_c
         if idx - 1 < 0 or updated[idx - 1] != " ":
             updated = f"{updated[:idx]} {updated[idx:]}"
             changed = True
-            mask, _ = code_mask(updated, start_state)
+            mask, _ = code_mask(updated, start_state, language=language)
             idx += 1
         idx += 1
 
@@ -400,7 +406,7 @@ def fix_inner_delimiter_spacing(
     updated_lines: list[str] = []
     in_block_comment = False
     for line in content.splitlines():
-        updated, line_changed, in_block_comment = _fix_inner_spacing_for_line(line, enabled_openers, in_block_comment)
+        updated, line_changed, in_block_comment = _fix_inner_spacing_for_line(line, enabled_openers, in_block_comment, language)
         changed = changed or line_changed
         updated_lines.append(updated)
     return join_lines(updated_lines, newline, trailing), changed, None
@@ -458,7 +464,7 @@ def fix_indent_multiple_of_four(
     return join_lines(updated_lines, newline, trailing), changed, None
 
 
-def _wrap_long_line(line: str, limit: int, in_block_comment: bool) -> tuple[list[str], bool, bool]:
+def _wrap_long_line(line: str, limit: int, in_block_comment: bool, language: str) -> tuple[list[str], bool, bool]:
     if len(line) <= limit:
         return [line], False, in_block_comment
 
@@ -470,7 +476,7 @@ def _wrap_long_line(line: str, limit: int, in_block_comment: bool) -> tuple[list
     current_block_state = in_block_comment
 
     while len(remaining) > limit:
-        mask, current_block_state = code_mask(remaining, current_block_state)
+        mask, current_block_state = code_mask(remaining, current_block_state, language=language)
         break_at = -1
         for idx in range(min(limit, len(remaining) - 1), max(indent + 8, 0), -1):
             if remaining[idx] != " ":
@@ -505,7 +511,7 @@ def fix_max_line_length(
     skipped = False
 
     for line in content.splitlines():
-        wrapped_lines, line_changed, in_block_comment = _wrap_long_line(line, limit, in_block_comment)
+        wrapped_lines, line_changed, in_block_comment = _wrap_long_line(line, limit, in_block_comment, language)
         if len(line) > limit and not line_changed:
             skipped = True
         changed = changed or line_changed
@@ -722,7 +728,7 @@ def detect_inner_delimiter_spacing(
     violations: list[Violation] = []
     in_block_comment = False
     for line_number, line in enumerate(content.splitlines(), start=1):
-        mask, in_block_comment = code_mask(line, in_block_comment)
+        mask, in_block_comment = code_mask(line, in_block_comment, language=language)
         for idx, char in enumerate(line):
             if not mask[idx]:
                 continue
@@ -771,7 +777,7 @@ def detect_comma_spacing(
     violations: list[Violation] = []
     in_block_comment = False
     for line_number, line in enumerate(content.splitlines(), start=1):
-        normalized, in_block_comment = transform_code_segments(line, in_block_comment, _normalize_comma_segment)
+        normalized, in_block_comment = transform_code_segments(line, in_block_comment, _normalize_comma_segment, language=language)
         if normalized != line:
             violations.append(
                 Violation(
@@ -796,7 +802,7 @@ def detect_assignment_spacing(
     violations: list[Violation] = []
     in_block_comment = False
     for line_number, line in enumerate(content.splitlines(), start=1):
-        normalized, in_block_comment = transform_code_segments(line, in_block_comment, _normalize_assignment_segment)
+        normalized, in_block_comment = transform_code_segments(line, in_block_comment, _normalize_assignment_segment, language=language)
         if normalized != line:
             violations.append(
                 Violation(

@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<meta name="color-scheme" content="light dark">
-<meta name="supported-color-schemes" content="light dark">
+<meta charset = "utf-8">
+<meta name = "color-scheme" content = "light dark">
+<meta name = "supported-color-schemes" content = "light dark">
 <title>Fintech Point Email Signature</title>
 <style>
     /* Load Poppins Font */
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+    @import url( 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap' );
 
     /* Reset styles for email clients */
     body { margin: 0; padding: 0; padding-top: 20px; }
@@ -17,66 +17,72 @@
 
     /* Dark Mode Support */
     /* Note: These styles activate only when the user's device is in Dark Mode */
-    @media (prefers-color-scheme: dark) {
+    @media ( prefers-color-scheme: dark ) {
         .dark-text-white { color: #ffffff !important; }
         .dark-text-gray { color: #dddddd !important; }
         .dark-text-lightgray { color: #aaaaaa !important; }
         .dark-icon { color: #66b3ff !important; }
         .dark-border { border-color: #555555 !important; }
-        .dark-button { background-color: #444444 !important; color: #ffffff !important; border-color: #666666 !important; }
+        .dark-button { background-color:
+            #444444 !important; color: #ffffff !important; border-color: #666666 !important; }
         .dark-link { color: #ffffff !important; }
     }
 </style>
 </head>
 <body>
 
-<!-- Main Signature Container -->
-<table cellpadding="0" cellspacing="0" border="0" style="font-family: 'Poppins', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #333333; max-width: 550px;">
+<!-- Main Signature Container - -> 
+<table cellpadding = "0" cellspacing = "0" border = "0" style = "font-family: 'Poppins', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #333333; max-width: 550px;">
     <tr>
-        <!-- Left Column: Logo -->
-        <td style="vertical-align: top; padding-right: 25px; width: 110px;">
-            <!-- REPLACE LINK WITH LOGO URL -->
-            <a href="https://fintech-point.com" target="_blank" style="text-decoration: none;">
-                <!-- Added a slight drop shadow and border radius for polish -->
-                <img src="https://fintech-point.com/wp-content/uploads/2023/10/updated-logo-scaled.png" alt="Fintech Point" width="120" style="display: block; border-radius: 6px; border: 0;">
+        <!-- Left Column: Logo - -> 
+        <td style = "vertical-align: top; padding-right: 25px; width: 110px;">
+            <!-- REPLACE LINK WITH LOGO URL - -> 
+            <a href = "https://fintech-point.com" target = "_blank" style = "text-decoration: none;">
+                <!-- Added a slight drop shadow and border radius for polish - -> 
+                <img src = "https://fintech-point.com/wp-content/uploads/2023/10/updated-logo-scaled.png"
+                    alt = "Fintech Point" width = "120" style = "display: block; border-radius: 6px; border: 0;">
             </a>
         </td>
 
-        <!-- Right Column: Details -->
-        <td class="dark-border" style="vertical-align: top; border-left: 2px solid #e0e0e0; padding-left: 25px;">
-            <table cellpadding="0" cellspacing="0" border="0" style="width: 100%;">
-                
-                <!-- Name & Title Section -->
+        <!-- Right Column: Details - -> 
+        <td class = "dark-border" style = "vertical-align: top; border-left: 2px solid #e0e0e0; padding-left: 25px;">
+            <table cellpadding = "0" cellspacing = "0" border = "0" style = "width: 100%;">
+
+                <!-- Name & Title Section - -> 
                 <tr>
-                    <td style="padding-bottom: 8px;">
-                        <span class="dark-text-white" style="font-size: 20px; font-weight: 700; color: #002244; display: block; letter-spacing: -0.5px; line-height: 1.2;">{{SIGNATURE_NAME}}</span>
-                        <span class="dark-text-gray" style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #666666; font-weight: 600; display: block; margin-top: 4px;">{{SIGNATURE_DESIGNATION}}</span>
+                    <td style = "padding-bottom: 8px;">
+                        <span class = "dark-text-white" style = "font-size: 20px; font-weight: 700; color: #002244; display: block; letter-spacing: -0.5px; line-height: 1.2;">{ { SIGNATURE_NAME } }</span>
+                        <span class = "dark-text-gray" style = "font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #666666; font-weight: 600; display: block; margin-top: 4px;">{ { SIGNATURE_DESIGNATION } }</span>
                     </td>
                 </tr>
 
-                <!-- Contact Info Grid -->
+                <!-- Contact Info Grid - -> 
                 <tr>
-                    <td style="padding-top: 5px; padding-bottom: 5px;">
-                        <table cellpadding="0" cellspacing="0" border="0">
-                            <!-- Email -->
+                    <td style = "padding-top: 5px; padding-bottom: 5px;">
+                        <table cellpadding = "0" cellspacing = "0" border = "0">
+                            <!-- Email - -> 
                             <tr>
-                                <td class="dark-icon" style="padding-bottom: 4px; padding-right: 10px; color: #0056b3; font-weight: bold; width: 20px;">&#9993;</td>
-                                <td style="padding-bottom: 4px;">
-                                    <a href="mailto:{{SIGNATURE_EMAIL}}" class="dark-link" style="color: #444444; text-decoration: none;">{{SIGNATURE_EMAIL}}</a>
+                                <td class = "dark-icon" style = "padding-bottom: 4px; padding-right: 10px; color: #0056b3; font-weight: bold; width: 20px;">&#9993;</td>
+                                <td style = "padding-bottom: 4px;">
+                                    <a href = "mailto:{{SIGNATURE_EMAIL}}" class = "dark-link"
+                                        style = "color: #444444; text-decoration: none;">{ { SIGNATURE_EMAIL } }</a>
                                 </td>
                             </tr>
-                            <!-- Phone -->
+                            <!-- Phone - -> 
                             <tr>
-                                <td class="dark-icon" style="padding-bottom: 4px; padding-right: 10px; color: #0056b3; font-weight: bold;">&#9742;</td>
-                                <td style="padding-bottom: 4px;">
-                                    <a href="tel:{{SIGNATURE_PHONE_TEL}}" class="dark-link" style="color: #444444; text-decoration: none;">{{SIGNATURE_PHONE}}</a>
+                                <td class = "dark-icon" style = "padding-bottom: 4px; padding-right: 10px; color: #0056b3; font-weight: bold;">&#9742;</td>
+                                <td style = "padding-bottom: 4px;">
+                                    <a href = "tel:{{SIGNATURE_PHONE_TEL}}" class = "dark-link"
+                                        style = "color: #444444; text-decoration: none;">{ { SIGNATURE_PHONE } }</a>
                                 </td>
                             </tr>
-                            <!-- Location -->
+                            <!-- Location - -> 
                             <tr>
-                                <td class="dark-icon" style="padding-bottom: 4px; padding-right: 10px; color: #0056b3; font-weight: bold;">&#8962;</td>
-                                <td class="dark-text-gray" style="padding-bottom: 4px; color: #666666; font-size: 13px;">
-                                    <a href="https://maps.app.goo.gl/Awk57jJZvxZzbzJf8" class="dark-link" style="color: #444444; text-decoration: none;">
+                                <td class = "dark-icon" style = "padding-bottom: 4px; padding-right: 10px; color: #0056b3; font-weight: bold;">&#8962;</td>
+                                <td class = "dark-text-gray"
+                                    style = "padding-bottom: 4px; color: #666666; font-size: 13px;">
+                                    <a href = "https://maps.app.goo.gl/Awk57jJZvxZzbzJf8" class = "dark-link"
+                                        style = "color: #444444; text-decoration: none;">
                                         3/2 Kalibari Road, Mymensingh, BD
                                     </a>
                                 </td>
@@ -85,10 +91,10 @@
                     </td>
                 </tr>
 
-                <!-- CTA / Website Link -->
+                <!-- CTA / Website Link - -> 
                 <tr>
-                    <td style="padding-top: 12px;">
-                        <a href="https://fintech-point.com" target="_blank" class="dark-button" style="display: inline-block; background-color: #f4f6f8; padding: 6px 12px; border-radius: 4px; border: 1px solid #e1e4e8; font-size: 12px; font-weight: bold; color: #002244; text-decoration: none;">
+                    <td style = "padding-top: 12px;">
+                        <a href = "https://fintech-point.com" target = "_blank" class = "dark-button" style = "display: inline-block; background-color: #f4f6f8; padding: 6px 12px; border-radius: 4px; border: 1px solid #e1e4e8; font-size: 12px; font-weight: bold; color: #002244; text-decoration: none;">
                             Visit Website &rarr;
                         </a>
                     </td>
@@ -98,11 +104,13 @@
     </tr>
 </table>
 
-<!-- Footer / Confidentiality Notice -->
-<table class="dark-border" cellpadding="0" cellspacing="0" border="0" style="font-family: 'Poppins', Helvetica, Arial, sans-serif; font-size: 9px; line-height: 1.4; color: #aaaaaa; margin-top: 25px; max-width: 550px; border-top: 1px solid #eeeeee; padding-top: 10px;">
+<!-- Footer / Confidentiality Notice - -> 
+<table class = "dark-border" cellpadding = "0" cellspacing = "0" border = "0" style = "font-family: 'Poppins', Helvetica, Arial, sans-serif; font-size: 9px; line-height: 1.4; color: #aaaaaa; margin-top: 25px; max-width: 550px; border-top: 1px solid #eeeeee; padding-top: 10px;">
     <tr>
-        <td class="dark-text-lightgray">
-            This email and any files transmitted with it are confidential and intended solely for the use of the individual or entity to whom they are addressed. If you have received this email in error, please notify the manager <a href="mailto:{{SIGNATURE_EMAIL}}">here</a>.
+        <td class = "dark-text-lightgray">
+            This email and any files transmitted with it are confidential and intended solely for the use of the
+                individual or entity to whom they are addressed. If you have received this email in error, please notify
+                the manager <a href = "mailto:{{SIGNATURE_EMAIL}}">here</a>.
         </td>
     </tr>
 </table>

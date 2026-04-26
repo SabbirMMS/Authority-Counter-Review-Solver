@@ -1,8 +1,12 @@
 {
   "metadata": {
-    "version": 2,
-    "source": "manual",
-    "last_updated": "2026-04-26"
+    "version": "1.2",
+    "source": "Fintech Point Engineering Code Guidelines",
+    "effective_date": "2025-12-29",
+    "notes": [
+      "This ruleset includes machine-checkable rules only.",
+      "Some guideline items require manual code review and are not fully automatable with regex/static file checks."
+    ]
   },
   "global": [
     {
@@ -11,121 +15,165 @@
       "description": "Lines must not have trailing whitespace."
     },
     {
+      "id": "global-max-line-length",
+      "type": "max_line_length",
+      "description": "Maximum line length is 120 characters.",
+      "value": 120
+    },
+    {
       "id": "global-no-tabs",
       "type": "forbid_regex",
-      "description": "Use spaces for indentation, not tabs.",
-      "pattern": "\t"
+      "description": "Tabs are forbidden; use 4 spaces only.",
+      "pattern": "\\t"
+    },
+    {
+      "id": "global-no-multiple-empty-lines",
+      "type": "forbid_regex",
+      "description": "Multiple consecutive empty lines are not allowed.",
+      "pattern": "(\\n\\s*){3,}",
+      "flags": "m"
+    },
+    {
+      "id": "global-inner-delimiter-spacing",
+      "type": "inner_delimiter_spacing",
+      "description": "Use one space after opening and before closing delimiters for non-empty (), [], and {}.",
+      "value": [
+        "()",
+        "[]",
+        "{}"
+      ]
     }
   ],
   "languages": {
-    "python": [
+    "php": [
       {
-        "id": "py-max-line-length",
-        "type": "max_line_length",
-        "description": "Python line length limit",
-        "value": 100
-      },
-      {
-        "id": "py-no-print",
-        "type": "forbid_regex",
-        "description": "Do not use print() statements in production code. Use logging instead.",
-        "pattern": "print\\s*\\("
-      },
-      {
-        "id": "py-require-docstring",
+        "id": "php-require-strict-types",
         "type": "require_regex",
-        "description": "Python files should contain at least one docstring.",
-        "pattern": "\"\"\"[\\s\\S]*\"\"\"",
+        "description": "PHP files must enable strict typing.",
+        "pattern": "^\\s*<\\?php\\s+declare\\s*\\(\\s*strict_types\\s*=\\s*1\\s*\\)\\s*;",
         "flags": "m"
       },
       {
-        "id": "py-inner-spacing",
-        "type": "inner_delimiter_spacing",
-        "description": "Enforce spacing inside delimiters for Python.",
-        "value": ["()", "[]", "{}"]
+        "id": "php-require-docblock",
+        "type": "require_regex",
+        "description": "PHP files with classes/functions should include PHPDoc blocks.",
+        "pattern": "/\\*\\*[\\s\\S]*?\\*/"
+      },
+      {
+        "id": "php-no-db-raw-user-risk",
+        "type": "forbid_regex",
+        "description": "Avoid DB::raw usage due to SQL injection risk.",
+        "pattern": "\\bDB::raw\\s*\\("
+      },
+      {
+        "id": "php-no-select-star",
+        "type": "forbid_regex",
+        "description": "Avoid SELECT * in queries.",
+        "pattern": "(?i)\\bselect\\s+\\*"
+      },
+      {
+        "id": "php-no-float-money-risk",
+        "type": "forbid_regex",
+        "description": "Avoid float for monetary schema fields.",
+        "pattern": "->float\\s*\\("
       }
     ],
     "javascript": [
       {
-        "id": "js-max-line-length",
-        "type": "max_line_length",
-        "description": "JS line length limit",
-        "value": 120
-      },
-      {
-        "id": "js-no-console-log",
+        "id": "js-no-var",
         "type": "forbid_regex",
-        "description": "Avoid console.log in production.",
-        "pattern": "console\\.log\\s*\\("
+        "description": "var is forbidden.",
+        "pattern": "\\bvar\\s+"
       },
       {
-        "id": "js-inner-spacing",
-        "type": "inner_delimiter_spacing",
-        "description": "Enforce spacing inside delimiters for JS.",
-        "value": ["()", "[]", "{}"]
+        "id": "js-no-loose-equality",
+        "type": "forbid_regex",
+        "description": "Use strict equality (===) instead of ==.",
+        "pattern": "(^|[^=!])==([^=]|$)",
+        "flags": "m"
+      },
+      {
+        "id": "js-require-jsdoc",
+        "type": "require_regex",
+        "description": "JavaScript/React files should include JSDoc blocks.",
+        "pattern": "/\\*\\*[\\s\\S]*?\\*/"
+      },
+      {
+        "id": "react-no-class-component",
+        "type": "forbid_regex",
+        "description": "React class components are forbidden; use functional components and Hooks.",
+        "pattern": "\\bclass\\s+\\w+\\s+extends\\s+(React\\.)?Component\\b"
       }
     ],
     "typescript": [
       {
-        "id": "ts-max-line-length",
-        "type": "max_line_length",
-        "description": "TS line length limit",
-        "value": 120
+        "id": "ts-no-var",
+        "type": "forbid_regex",
+        "description": "var is forbidden.",
+        "pattern": "\\bvar\\s+"
       },
       {
-        "id": "ts-no-any",
+        "id": "ts-no-loose-equality",
         "type": "forbid_regex",
-        "description": "Avoid using 'any' type.",
-        "pattern": ":\\s*any\\b"
-      }
-    ],
-    "php": [
-      {
-        "id": "php-max-line-length",
-        "type": "max_line_length",
-        "description": "PHP line length limit",
-        "value": 120
-      },
-      {
-        "id": "php-no-eval",
-        "type": "forbid_regex",
-        "description": "Never use eval().",
-        "pattern": "eval\\s*\\("
-      },
-      {
-        "id": "php-no-closing-tag",
-        "type": "forbid_regex",
-        "description": "Avoid closing PHP tags at the end of files.",
-        "pattern": "\\?>\\s*$",
+        "description": "Use strict equality (===) instead of ==.",
+        "pattern": "(^|[^=!])==([^=]|$)",
         "flags": "m"
-      }
-    ],
-    "go": [
-      {
-        "id": "go-max-line-length",
-        "type": "max_line_length",
-        "description": "Go line length limit",
-        "value": 120
       },
       {
-        "id": "go-no-panic",
+        "id": "ts-require-jsdoc",
+        "type": "require_regex",
+        "description": "TypeScript files should include JSDoc blocks for components/utilities.",
+        "pattern": "/\\*\\*[\\s\\S]*?\\*/"
+      },
+      {
+        "id": "tsx-no-class-component",
         "type": "forbid_regex",
-        "description": "Avoid using panic().",
-        "pattern": "panic\\s*\\("
+        "description": "React class components are forbidden; use functional components and Hooks.",
+        "pattern": "\\bclass\\s+\\w+\\s+extends\\s+(React\\.)?Component\\b"
+      }
+    ],
+    "dart": [
+      {
+        "id": "dart-no-dynamic",
+        "type": "forbid_regex",
+        "description": "Avoid dynamic unless absolutely necessary.",
+        "pattern": "\\bdynamic\\b"
+      },
+      {
+        "id": "dart-require-docblock",
+        "type": "require_regex",
+        "description": "Dart classes/functions should include documentation blocks.",
+        "pattern": "/\\*\\*[\\s\\S]*?\\*/"
       }
     ],
     "java": [
       {
-        "id": "java-max-line-length",
-        "type": "max_line_length",
-        "description": "Java line length limit",
-        "value": 120
+        "id": "java-require-javadoc",
+        "type": "require_regex",
+        "description": "Java files should include JavaDoc blocks.",
+        "pattern": "/\\*\\*[\\s\\S]*?\\*/"
+      }
+    ],
+    "sql": [
+      {
+        "id": "sql-no-select-star",
+        "type": "forbid_regex",
+        "description": "Avoid SELECT *.",
+        "pattern": "(?i)\\bselect\\s+\\*"
       },
       {
-        "id": "java-no-system-out",
+        "id": "sql-no-unbounded-delete",
         "type": "forbid_regex",
-        "description": "Use a logger instead of System.out.println.",
-        "pattern": "System\\.out\\.print"
+        "description": "DELETE without WHERE is forbidden.",
+        "pattern": "\\bdelete\\s+from\\s+[a-zA-Z0-9_\\.]+\\s*(?!where\\b)[^;]*;",
+        "flags": "i"
+      },
+      {
+        "id": "sql-no-unbounded-update",
+        "type": "forbid_regex",
+        "description": "UPDATE without WHERE is forbidden.",
+        "pattern": "\\bupdate\\s+[a-zA-Z0-9_\\.]+\\s+set\\b(?:(?!\\bwhere\\b)[\\s\\S])*?;",
+        "flags": "i"
       }
     ]
   }

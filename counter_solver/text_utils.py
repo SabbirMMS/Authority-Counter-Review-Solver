@@ -7,7 +7,7 @@ BLOCK_OPENERS = ("{", "[", "(")
 BLOCK_CLOSERS = ("}", "]", ")")
 
 
-def code_mask(line: str, in_block_comment: bool) -> tuple[list[bool], bool]:
+def code_mask(line: str, in_block_comment: bool, language: str | None = None) -> tuple[list[bool], bool]:
     mask = [False] * len(line)
     quote: str | None = None
     escaped = False
@@ -46,8 +46,10 @@ def code_mask(line: str, in_block_comment: bool) -> tuple[list[bool], bool]:
         if ch == "#":
             break
 
-        if idx + 1 < len(line) and ch == "/" and line[idx + 1] == "/":
-            break
+        # In Python '//' is floor division, not a comment.
+        if language != "python":
+            if idx + 1 < len(line) and ch == "/" and line[idx + 1] == "/":
+                break
 
         if idx + 1 < len(line) and ch == "/" and line[idx + 1] == "*":
             in_block_comment = True
@@ -64,8 +66,9 @@ def transform_code_segments(
     line: str,
     in_block_comment: bool,
     transform: callable,
+    language: str | None = None,
 ) -> tuple[str, bool]:
-    mask, new_state = code_mask(line, in_block_comment)
+    mask, new_state = code_mask(line, in_block_comment, language)
     if not line:
         return line, new_state
 
