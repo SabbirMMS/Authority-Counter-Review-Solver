@@ -8,8 +8,8 @@ Fix critical bugs in the `counter-solver` tool and ensure perfect, rule-complian
 ### 2026-04-26
 - **Operator Splitting Bug Fix**: Refactored `_normalize_assignment_segment` to use a single-pass regex for multi-character operators (e.g., `+=`, `===`, `!==`).
 - **Python Floor Division Support**: Updated `code_mask` to prevent `//` from being treated as a comment in Python.
-- **Triple-Quote Masking**: Refactored `code_mask` to support triple quotes (`'''` and `"""`) and maintain state across multi-line blocks. This protects CSS and HTML blocks inside f-strings or docstrings.
-- **Improved Spacing Safety**: Fixed a bug where f-string literal escapes `{{` and `}}` were being split into `{ {` and `} }`.
+- **Refined Line Wrapping**: Fixed an issue where `max-line-length` fixes could leave trailing spaces on broken lines. Added aggressive `rstrip()` to segments and a check to avoid empty indentation-only lines.
+- **CLI Enhancements**: Added `--only-rules` and `--skip-rules` flags to allow selective rule application from the command line.
 - **Expanded Rule Support**:
     - Added generic regex fixer (`fix_regex_rule`).
     - Added safe fixers for `global-no-tabs` and `global-no-multiple-empty-lines`.

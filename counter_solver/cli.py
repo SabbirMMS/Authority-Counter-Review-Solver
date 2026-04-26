@@ -26,6 +26,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--project", help="Project folder to scan and fix.")
     parser.add_argument("--mode", choices=("bulk", "folder", "manual"), help="Run mode.")
     parser.add_argument("--rules", help="Optional authority-compatible rules JSON.")
+    parser.add_argument("--only-rules", help="Comma-separated list of rule IDs to include.")
+    parser.add_argument("--skip-rules", help="Comma-separated list of rule IDs to exclude.")
     parser.add_argument("--preview-only", action="store_true", help="Preview changes without writing files.")
     return parser
 
@@ -51,6 +53,19 @@ def run(
     )
 
     ruleset = load_ruleset(args.rules)
+
+    if args.only_rules:
+        only_ids = {rid.strip() for rid in args.only_rules.split(",") if rid.strip()}
+        ruleset.global_rules = [r for r in ruleset.global_rules if r.rule_id in only_ids]
+        for lang in ruleset.language_rules:
+            ruleset.language_rules[lang] = [r for r in ruleset.language_rules[lang] if r.rule_id in only_ids]
+
+    if args.skip_rules:
+        skip_ids = {rid.strip() for rid in args.skip_rules.split(",") if rid.strip()}
+        ruleset.global_rules = [r for r in ruleset.global_rules if r.rule_id not in skip_ids]
+        for lang in ruleset.language_rules:
+            ruleset.language_rules[lang] = [r for r in ruleset.language_rules[lang] if r.rule_id not in skip_ids]
+
     supported_files = collect_supported_files(project_root)
     if not supported_files:
         print("No supported source files were found in the selected project.", file=out)

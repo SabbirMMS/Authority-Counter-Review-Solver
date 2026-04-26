@@ -493,9 +493,13 @@ def _wrap_long_line(line: str, limit: int, state: str | None, language: str) -> 
 
         wrapped.append(remaining[:break_at].rstrip())
         remaining = f"{continuation_indent}{remaining[break_at + 1:].lstrip()}"
+        if not remaining.strip():
+            remaining = ""
+            break
         changed = True
 
-    wrapped.append(remaining)
+    if remaining.strip():
+        wrapped.append(remaining.rstrip())
     return wrapped, changed, current_state
 
 
