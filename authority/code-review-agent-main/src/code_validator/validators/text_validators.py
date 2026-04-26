@@ -101,7 +101,8 @@ class InnerDelimiterSpacingValidator( BaseRuleValidator ):
         enabled_openers = {
             item[ 0 ]
             for item in raw_delimiters
-            if isinstance( item, str ) and len( item ) == 2 and item[ 0 ] in self._pairs and self._pairs[ item[ 0 ] ] == item[ 1 ]
+            if isinstance( item, str ) and len( item ) == 2 and item[ 0 ] in self._pairs and self._pairs[ item[ 0 ] ] == 
+                item[ 1 ]
         }
         if not enabled_openers:
             enabled_openers = { "(","[","{" }
@@ -110,8 +111,10 @@ class InnerDelimiterSpacingValidator( BaseRuleValidator ):
         in_block_comment = False
         for line_number, line in enumerate( content.splitlines(), start = 1 ):
             code_mask, in_block_comment = self._code_mask( line, in_block_comment )
-            violations.extend( self._check_opening( path, line, code_mask, line_number, rule.rule_id, enabled_openers ) )
-            violations.extend( self._check_closing( path, line, code_mask, line_number, rule.rule_id, enabled_openers ) )
+            violations.extend( self._check_opening( path, line, code_mask, line_number, rule.rule_id, enabled_openers )
+                )
+            violations.extend( self._check_closing( path, line, code_mask, line_number, rule.rule_id, enabled_openers )
+                )
         return violations
 
     def _check_opening(
