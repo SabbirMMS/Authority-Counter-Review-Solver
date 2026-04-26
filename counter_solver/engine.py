@@ -21,7 +21,10 @@ from counter_solver.text_utils import (
 )
 
 
-SAFE_REGEX_FIXERS: dict[str, callable] = {}
+SAFE_REGEX_FIXERS: dict[str, dict[str, str]] = {
+    "global-no-tabs": {"replacement": "    "},
+    "global-no-multiple-empty-lines": {"replacement": "\n\n"},
+}
 
 
 def infer_language(path: Path) -> str | None:
@@ -212,11 +215,11 @@ def fix_no_tabs(
     trailing = had_trailing_newline(content)
     changed = False
     updated_lines: list[str] = []
-    in_block_comment = False
+    state = None
     for line in content.splitlines():
-        updated, in_block_comment = transform_code_segments(
+        updated, state = transform_code_segments(
             line,
-            in_block_comment,
+            state,
             lambda chunk: chunk.replace("\t", "    "),
             language=language,
         )
@@ -276,9 +279,9 @@ def fix_comma_spacing(
     trailing = had_trailing_newline(content)
     changed = False
     updated_lines: list[str] = []
-    in_block_comment = False
+    state = None
     for line in content.splitlines():
-        updated, in_block_comment = transform_code_segments(line, in_block_comment, _normalize_comma_segment, language=language)
+        updated, state = transform_code_segments(line, state, _normalize_comma_segment, language=language)
         if updated != line:
             changed = True
         updated_lines.append(updated)
@@ -321,19 +324,19 @@ def fix_assignment_spacing(
     trailing = had_trailing_newline(content)
     changed = False
     updated_lines: list[str] = []
-    in_block_comment = False
+    state = None
     for line in content.splitlines():
-        updated, in_block_comment = transform_code_segments(line, in_block_comment, _normalize_assignment_segment, language=language)
+        updated, state = transform_code_segments(line, state, _normalize_assignment_segment, language=language)
         if updated != line:
             changed = True
         updated_lines.append(updated)
     return join_lines(updated_lines, newline, trailing), changed, None
 
 
-def _fix_inner_spacing_for_line(line: str, enabled_openers: set[str], in_block_comment: bool, language: str) -> tuple[str, bool, bool]:
+def _fix_inner_spacing_for_line(line: str, enabled_openers: set[str], state: str | None, language: str) -> tuple[str, bool, str | None]:
     changed = False
     updated = line
-    start_state = in_block_comment
+    start_state = state
 
     mask, end_state = code_mask(updated, start_state, language=language)
     idx = 0
@@ -404,9 +407,9 @@ def fix_inner_delimiter_spacing(
     trailing = had_trailing_newline(content)
     changed = False
     updated_lines: list[str] = []
-    in_block_comment = False
+    state = None
     for line in content.splitlines():
-        updated, line_changed, in_block_comment = _fix_inner_spacing_for_line(line, enabled_openers, in_block_comment, language)
+        updated, line_changed, state = _fix_inner_spacing_for_line(line, enabled_openers, state, language)
         changed = changed or line_changed
         updated_lines.append(updated)
     return join_lines(updated_lines, newline, trailing), changed, None
@@ -437,6 +440,7 @@ def fix_indent_multiple_of_four(
     previous_indent = 0
     previous_opened_block = False
 
+    step = int(rule.value or (2 if language == "dart" else 4))
     for line in lines:
         stripped = line.lstrip(" ")
         if not stripped:
@@ -445,14 +449,14 @@ def fix_indent_multiple_of_four(
 
         leading_spaces = len(line) - len(stripped)
         target_indent = leading_spaces
-        if leading_spaces % 4 != 0:
+        if leading_spaces % step != 0:
             if stripped.startswith(BLOCK_CLOSERS) or stripped.startswith("</"):
-                target_indent = max((leading_spaces // 4) * 4, 0)
+                target_indent = max((leading_spaces // step) * step, 0)
             elif previous_opened_block and leading_spaces <= previous_indent:
-                target_indent = previous_indent + 4
+                target_indent = previous_indent + step
             else:
-                remainder = leading_spaces % 4
-                target_indent = leading_spaces - remainder if remainder < 2 else leading_spaces + (4 - remainder)
+                remainder = leading_spaces % step
+                target_indent = leading_spaces - remainder if remainder < (step // 2) else leading_spaces + (step - remainder)
 
         updated_line = f"{' ' * max(target_indent, 0)}{stripped}"
         if updated_line != line:
@@ -464,19 +468,19 @@ def fix_indent_multiple_of_four(
     return join_lines(updated_lines, newline, trailing), changed, None
 
 
-def _wrap_long_line(line: str, limit: int, in_block_comment: bool, language: str) -> tuple[list[str], bool, bool]:
+def _wrap_long_line(line: str, limit: int, state: str | None, language: str) -> tuple[list[str], bool, str | None]:
     if len(line) <= limit:
-        return [line], False, in_block_comment
+        return [line], False, state
 
     indent = len(line) - len(line.lstrip(" "))
     continuation_indent = " " * (indent + 4)
     remaining = line
     wrapped: list[str] = []
     changed = False
-    current_block_state = in_block_comment
+    current_state = state
 
     while len(remaining) > limit:
-        mask, current_block_state = code_mask(remaining, current_block_state, language=language)
+        mask, current_state = code_mask(remaining, current_state, language=language)
         break_at = -1
         for idx in range(min(limit, len(remaining) - 1), max(indent + 8, 0), -1):
             if remaining[idx] != " ":
@@ -485,14 +489,14 @@ def _wrap_long_line(line: str, limit: int, in_block_comment: bool, language: str
                 break_at = idx
                 break
         if break_at == -1:
-            return [line], False, in_block_comment
+            return [line], False, state
 
         wrapped.append(remaining[:break_at].rstrip())
         remaining = f"{continuation_indent}{remaining[break_at + 1:].lstrip()}"
         changed = True
 
     wrapped.append(remaining)
-    return wrapped, changed, current_block_state
+    return wrapped, changed, current_state
 
 
 def fix_max_line_length(
@@ -507,11 +511,11 @@ def fix_max_line_length(
     trailing = had_trailing_newline(content)
     updated_lines: list[str] = []
     changed = False
-    in_block_comment = False
+    state = None
     skipped = False
 
     for line in content.splitlines():
-        wrapped_lines, line_changed, in_block_comment = _wrap_long_line(line, limit, in_block_comment, language)
+        wrapped_lines, line_changed, state = _wrap_long_line(line, limit, state, language)
         if len(line) > limit and not line_changed:
             skipped = True
         changed = changed or line_changed
@@ -630,18 +634,19 @@ def detect_indent_multiple_of_four(
     rule: Rule,
 ) -> list[Violation]:
     violations: list[Violation] = []
+    step = int(rule.value or (2 if language == "dart" else 4))
     for line_number, line in enumerate(content.splitlines(), start=1):
         if not line.strip():
             continue
         stripped = line.lstrip(" ")
         leading_spaces = len(line) - len(stripped)
-        if leading_spaces % 4 != 0:
+        if leading_spaces % step != 0:
             violations.append(
                 Violation(
                     rule_id=rule.rule_id,
                     rule_type=rule.rule_type,
                     path=relative_path,
-                    message=f"Line {line_number} indentation is not a multiple of 4 spaces.",
+                    message=f"Line {line_number} indentation is not a multiple of {step} spaces.",
                     line_number=line_number,
                     fixable=True,
                 )
@@ -706,6 +711,26 @@ def detect_require_regex(
             fixable=rule.rule_id in SAFE_REGEX_FIXERS,
         )
     ]
+def fix_regex_rule(
+    relative_path: str,
+    path: Path,
+    content: str,
+    language: str,
+    rule: Rule,
+) -> tuple[str, bool, str | None]:
+    fix_data = SAFE_REGEX_FIXERS.get(rule.rule_id)
+    if not fix_data or not rule.pattern:
+        return content, False, None
+
+    replacement = fix_data["replacement"]
+    flags = 0
+    if "i" in rule.flags.lower():
+        flags |= re.IGNORECASE
+    if "m" in rule.flags.lower():
+        flags |= re.MULTILINE
+
+    updated = re.sub(rule.pattern, replacement, content, flags=flags)
+    return updated, updated != content, None
 
 
 def detect_inner_delimiter_spacing(
@@ -726,9 +751,9 @@ def detect_inner_delimiter_spacing(
         enabled_openers = {"(", "[", "{"}
 
     violations: list[Violation] = []
-    in_block_comment = False
+    state = None
     for line_number, line in enumerate(content.splitlines(), start=1):
-        mask, in_block_comment = code_mask(line, in_block_comment, language=language)
+        mask, state = code_mask(line, state, language=language)
         for idx, char in enumerate(line):
             if not mask[idx]:
                 continue
@@ -775,9 +800,9 @@ def detect_comma_spacing(
     rule: Rule,
 ) -> list[Violation]:
     violations: list[Violation] = []
-    in_block_comment = False
+    state = None
     for line_number, line in enumerate(content.splitlines(), start=1):
-        normalized, in_block_comment = transform_code_segments(line, in_block_comment, _normalize_comma_segment, language=language)
+        normalized, state = transform_code_segments(line, state, _normalize_comma_segment, language=language)
         if normalized != line:
             violations.append(
                 Violation(
@@ -800,9 +825,9 @@ def detect_assignment_spacing(
     rule: Rule,
 ) -> list[Violation]:
     violations: list[Violation] = []
-    in_block_comment = False
+    state = None
     for line_number, line in enumerate(content.splitlines(), start=1):
-        normalized, in_block_comment = transform_code_segments(line, in_block_comment, _normalize_assignment_segment, language=language)
+        normalized, state = transform_code_segments(line, state, _normalize_assignment_segment, language=language)
         if normalized != line:
             violations.append(
                 Violation(
@@ -961,9 +986,9 @@ def _detect_brace_function_length(relative_path: str, content: str, rule: Rule, 
         depth = 0
         found_open = False
         end = idx
-        in_block_comment = False
+        state = None
         while end < len(lines):
-            mask, in_block_comment = code_mask(lines[end], in_block_comment)
+            mask, state = code_mask(lines[end], state)
             for char_index, char in enumerate(lines[end]):
                 if char_index >= len(mask) or not mask[char_index]:
                     continue
@@ -1065,6 +1090,7 @@ FIXERS: dict[str, callable] = {
     "max_line_length": fix_max_line_length,
     "no_tabs": fix_no_tabs,
     "no_trailing_whitespace": fix_no_trailing_whitespace,
+    "forbid_regex": fix_regex_rule,
 }
 
 

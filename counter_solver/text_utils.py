@@ -7,23 +7,57 @@ BLOCK_OPENERS = ("{", "[", "(")
 BLOCK_CLOSERS = ("}", "]", ")")
 
 
-def code_mask(line: str, in_block_comment: bool, language: str | None = None) -> tuple[list[bool], bool]:
+def code_mask(line: str, state: str | None = None, language: str | None = None) -> tuple[list[bool], str | None]:
+    """
+    Returns a mask (True for code, False for strings/comments) and the end state.
+    State can be:
+        None: Normal code
+        '/*': Inside block comment
+        '\"\"\"': Inside triple double quotes
+        \"'''\": Inside triple single quotes
+    """
     mask = [False] * len(line)
     quote: str | None = None
     escaped = False
     idx = 0
 
+    current_state = state
+
     while idx < len(line):
         ch = line[idx]
 
-        if in_block_comment:
+        # Handle existing multi-line states
+        if current_state == "/*":
             if idx + 1 < len(line) and ch == "*" and line[idx + 1] == "/":
                 idx += 2
-                in_block_comment = False
+                current_state = None
                 continue
             idx += 1
             continue
+        elif current_state == '"""':
+            if not escaped and idx + 2 < len(line) and line[idx:idx + 3] == '"""':
+                idx += 3
+                current_state = None
+                continue
+            if ch == "\\":
+                escaped = not escaped
+            else:
+                escaped = False
+            idx += 1
+            continue
+        elif current_state == "'''":
+            if not escaped and idx + 2 < len(line) and line[idx:idx + 3] == "'''":
+                idx += 3
+                current_state = None
+                continue
+            if ch == "\\":
+                escaped = not escaped
+            else:
+                escaped = False
+            idx += 1
+            continue
 
+        # Handle string literals (single line)
         if quote is not None:
             if escaped:
                 escaped = False
@@ -38,11 +72,22 @@ def code_mask(line: str, in_block_comment: bool, language: str | None = None) ->
             idx += 1
             continue
 
-        if ch in {'"', "'", "`"}:
+        # Detect new states
+        if ch in {'"', "'"}:
+            # Triple quotes check
+            if idx + 2 < len(line) and line[idx:idx + 3] == ch * 3:
+                current_state = ch * 3
+                idx += 3
+                continue
+            quote = ch
+            idx += 1
+            continue
+        if ch == "`":
             quote = ch
             idx += 1
             continue
 
+        # Comments
         if ch == "#":
             break
 
@@ -52,23 +97,23 @@ def code_mask(line: str, in_block_comment: bool, language: str | None = None) ->
                 break
 
         if idx + 1 < len(line) and ch == "/" and line[idx + 1] == "*":
-            in_block_comment = True
+            current_state = "/*"
             idx += 2
             continue
 
         mask[idx] = True
         idx += 1
 
-    return mask, in_block_comment
+    return mask, current_state
 
 
 def transform_code_segments(
     line: str,
-    in_block_comment: bool,
+    state: str | None,
     transform: callable,
     language: str | None = None,
-) -> tuple[str, bool]:
-    mask, new_state = code_mask(line, in_block_comment, language)
+) -> tuple[str, str | None]:
+    mask, new_state = code_mask(line, state, language)
     if not line:
         return line, new_state
 
