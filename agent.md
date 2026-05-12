@@ -30,7 +30,7 @@ When modifying fixers, be aware of these established protections:
 *   **Trailing Whitespace:** The `fix_assignment_spacing` specifically strips trailing whitespace on modified lines, but we also rely on the `no_trailing_whitespace` fixer running last as a final catch-all.
 *   **Blade / HTML Comments:** `<!--` and `-->` are explicitly protected inside `_normalize_assignment_segment` using placeholder substitution so they are not incorrectly split into `- ->` by the assignment spacing normalizer.
 *   **Strict Equality:** The `strict_equality` fixer cleanly transitions `==` to `===` and `!=` to `!==` in JS, TS, and PHP using a character-by-character replacement approach coupled with `code_mask` to safely avoid strings. 
-*   **Max Line Length:** The maximum line length is standardized at **110 characters**.
+*   **Max Line Length:** The maximum line length is standardized at **110 characters**. The line wrap logic intentionally **skips breaking lines if the only available space is inside a string or comment**, because blindly wrapping text without language-specific AST syntax handling (like adding `+` for strings or `//` for comments) will cause compilation/syntax errors.
 
 ## Modes of Operation
 *   **Bulk:** Scans the entire project, shows a preview, and asks to apply safe fixes.

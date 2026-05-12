@@ -493,6 +493,87 @@ def fix_indent_multiple_of_four(
     return join_lines(updated_lines, newline, trailing), changed, None
 
 
+def _get_context_at(line: str, pos: int, state: str | None, language: str) -> str | None:
+    quote: str | None = None
+    escaped = False
+    idx = 0
+    current_state = state
+
+    while idx <= pos and idx < len(line):
+        ch = line[idx]
+        
+        if current_state == "/*":
+            if idx + 1 < len(line) and ch == "*" and line[idx + 1] == "/":
+                idx += 2
+                current_state = None
+                continue
+            if idx == pos: return "/*"
+            idx += 1
+            continue
+        elif current_state == '"""':
+            if not escaped and idx + 2 < len(line) and line[idx:idx + 3] == '"""':
+                idx += 3
+                current_state = None
+                continue
+            if ch == "\\": escaped = not escaped
+            else: escaped = False
+            if idx == pos: return '"""'
+            idx += 1
+            continue
+        elif current_state == "'''":
+            if not escaped and idx + 2 < len(line) and line[idx:idx + 3] == "'''":
+                idx += 3
+                current_state = None
+                continue
+            if ch == "\\": escaped = not escaped
+            else: escaped = False
+            if idx == pos: return "'''"
+            idx += 1
+            continue
+            
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == quote:
+                quote = None
+            if idx == pos: return quote
+            idx += 1
+            continue
+            
+        if ch in {'"', "'", "`"}:
+            if idx + 2 < len(line) and line[idx:idx + 3] == ch * 3:
+                current_state = ch * 3
+                idx += 3
+                if idx - 1 >= pos: return current_state
+                continue
+            quote = ch
+            if idx == pos: return quote
+            idx += 1
+            continue
+            
+        if ch == "#":
+            if idx <= pos: return "#"
+            break
+            
+        if language != "python":
+            if idx + 1 < len(line) and ch == "/" and line[idx + 1] == "/":
+                if idx <= pos: return "//"
+                break
+            
+            if idx + 1 < len(line) and ch == "/" and line[idx + 1] == "*":
+                current_state = "/*"
+                idx += 2
+                if idx - 1 >= pos: return "/*"
+                continue
+            
+        if idx == pos: return None
+        idx += 1
+        
+    return None
+
+
 def _wrap_long_line(line: str, limit: int, state: str | None, language: str) -> tuple[list[str], bool, str | None]:
     if len(line) <= limit:
         return [line], False, state
@@ -510,17 +591,38 @@ def _wrap_long_line(line: str, limit: int, state: str | None, language: str) -> 
         for idx in range(min(limit, len(remaining) - 1), max(indent + 8, 0), -1):
             if remaining[idx] != " ":
                 continue
-            if idx < len(mask) and mask[idx]:
-                break_at = idx
-                break
+            break_at = idx
+            break
         if break_at == -1:
             return [line], False, state
 
-        wrapped.append(remaining[:break_at].rstrip())
-        remaining = f"{continuation_indent}{remaining[break_at + 1:].lstrip()}"
-        if not remaining.strip():
-            remaining = ""
-            break
+        ctx = _get_context_at(remaining, break_at, current_state, language)
+        left = remaining[:break_at].rstrip()
+        right = remaining[break_at + 1:].lstrip()
+
+        if ctx in {"'", '"'}:
+            if language in {"javascript", "typescript"}:
+                wrapped.append(f"{left}{ctx} +")
+                remaining = f"{continuation_indent}{ctx}{right}"
+            elif language == "php":
+                wrapped.append(f"{left}{ctx} .")
+                remaining = f"{continuation_indent}{ctx}{right}"
+            elif language == "python":
+                wrapped.append(f"{left}{ctx} \\")
+                remaining = f"{continuation_indent}{ctx}{right}"
+            else:
+                wrapped.append(left)
+                remaining = f"{continuation_indent}{right}"
+        elif ctx == "//":
+            wrapped.append(left)
+            remaining = f"{continuation_indent}// {right}"
+        elif ctx == "#":
+            wrapped.append(left)
+            remaining = f"{continuation_indent}# {right}"
+        else:
+            wrapped.append(left)
+            remaining = f"{continuation_indent}{right}"
+            
         changed = True
 
     if remaining.strip():
