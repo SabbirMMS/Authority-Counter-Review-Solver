@@ -40,6 +40,7 @@ SAFE_FIXABLE_RULE_TYPES: frozenset[str] = frozenset(
         "max_line_length",
         "no_tabs",
         "no_trailing_whitespace",
+        "strict_equality",
     }
 )
 
@@ -70,8 +71,8 @@ def build_default_ruleset() -> RuleSet:
         Rule(
             rule_id="global-max-line-length",
             rule_type="max_line_length",
-            description="Lines should not exceed 120 characters.",
-            value=120,
+            description="Lines should not exceed 110 characters.",
+            value=110,
         ),
         Rule(
             rule_id="global-inner-delimiter-spacing",
@@ -104,6 +105,12 @@ def build_default_ruleset() -> RuleSet:
         value={"target": "class", "style": "pascal_case"},
     )
 
+    strict_equality_rule = Rule(
+        rule_id="global-strict-equality",
+        rule_type="strict_equality",
+        description="Use strict equality operators (=== / !==) instead of loose (== / !=).",
+    )
+
     language_rules = {
         "python": [
             function_length_rule,
@@ -122,6 +129,7 @@ def build_default_ruleset() -> RuleSet:
             ),
             function_length_rule,
             class_naming_rule,
+            strict_equality_rule,
         ],
         "typescript": [
             Rule(
@@ -136,6 +144,7 @@ def build_default_ruleset() -> RuleSet:
             ),
             function_length_rule,
             class_naming_rule,
+            strict_equality_rule,
         ],
         "php": [
             Rule(
@@ -150,6 +159,7 @@ def build_default_ruleset() -> RuleSet:
             ),
             function_length_rule,
             class_naming_rule,
+            strict_equality_rule,
         ],
         "dart": [
             Rule(
