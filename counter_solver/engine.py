@@ -597,31 +597,32 @@ def _wrap_long_line(line: str, limit: int, state: str | None, language: str) -> 
             return [line], False, state
 
         ctx = _get_context_at(remaining, break_at, current_state, language)
-        left = remaining[:break_at].rstrip()
-        right = remaining[break_at + 1:].lstrip()
-
+        
         if ctx in {"'", '"'}:
+            # Preserve the space inside the string for valid concatenation
+            left_str = remaining[:break_at+1]
+            right_str = remaining[break_at+1:]
             if language in {"javascript", "typescript"}:
-                wrapped.append(f"{left}{ctx} +")
-                remaining = f"{continuation_indent}{ctx}{right}"
+                wrapped.append(f"{left_str}{ctx} +")
+                remaining = f"{continuation_indent}{ctx}{right_str}"
             elif language == "php":
-                wrapped.append(f"{left}{ctx} .")
-                remaining = f"{continuation_indent}{ctx}{right}"
+                wrapped.append(f"{left_str}{ctx} .")
+                remaining = f"{continuation_indent}{ctx}{right_str}"
             elif language == "python":
-                wrapped.append(f"{left}{ctx} \\")
-                remaining = f"{continuation_indent}{ctx}{right}"
+                wrapped.append(f"{left_str}{ctx} \\")
+                remaining = f"{continuation_indent}{ctx}{right_str}"
             else:
-                wrapped.append(left)
-                remaining = f"{continuation_indent}{right}"
+                wrapped.append(remaining[:break_at].rstrip())
+                remaining = f"{continuation_indent}{remaining[break_at + 1:].lstrip()}"
         elif ctx == "//":
-            wrapped.append(left)
-            remaining = f"{continuation_indent}// {right}"
+            wrapped.append(remaining[:break_at].rstrip())
+            remaining = f"{continuation_indent}// {remaining[break_at + 1:].lstrip()}"
         elif ctx == "#":
-            wrapped.append(left)
-            remaining = f"{continuation_indent}# {right}"
+            wrapped.append(remaining[:break_at].rstrip())
+            remaining = f"{continuation_indent}# {remaining[break_at + 1:].lstrip()}"
         else:
-            wrapped.append(left)
-            remaining = f"{continuation_indent}{right}"
+            wrapped.append(remaining[:break_at].rstrip())
+            remaining = f"{continuation_indent}{remaining[break_at + 1:].lstrip()}"
             
         changed = True
 
