@@ -151,7 +151,18 @@ def apply_safe_fixes(
     applied_rule_ids: list[str] = []
     skipped_fix_reasons: list[str] = []
 
-    for rule in rules:
+    # Prioritize rules so that max_line_length is applied late,
+    # and no_trailing_whitespace is applied very last.
+    def rule_priority(r: Rule) -> int:
+        if r.rule_type == "no_trailing_whitespace":
+            return 2
+        if r.rule_type == "max_line_length":
+            return 1
+        return 0
+
+    sorted_rules = sorted(rules, key=rule_priority)
+
+    for rule in sorted_rules:
         fixer = FIXERS.get(rule.rule_type)
         if not fixer:
             if rule.rule_type in {"forbid_regex", "require_regex"} and rule.rule_id not in SAFE_REGEX_FIXERS:
@@ -295,6 +306,13 @@ def _normalize_assignment_segment(segment: str) -> str:
     leading = leading_match.group(0) if leading_match else ""
     body = segment[len(leading):]
 
+    # Protect HTML/Blade comment markers (<!-- and -->) from being split by
+    # the operator normaliser. Replace them with unique placeholders first.
+    PLACEHOLDER_OPEN = "\x00HTMLCOMMENTOPEN\x00"
+    PLACEHOLDER_CLOSE = "\x00HTMLCOMMENTCLOSE\x00"
+    body = body.replace("<!--", PLACEHOLDER_OPEN)
+    body = body.replace("-->", PLACEHOLDER_CLOSE)
+
     # Use a single-pass regex to avoid splitting multi-character operators.
     # Order is important: longest patterns must come first.
     operators = [
@@ -310,6 +328,11 @@ def _normalize_assignment_segment(segment: str) -> str:
     updated = re.sub(pattern, repl, body)
     # Normalize multiple spaces into one (only between non-space characters)
     updated = re.sub(r"(?<=\S) {2,}(?=\S)", " ", updated)
+
+    # Restore protected HTML/Blade comment markers
+    updated = updated.replace(PLACEHOLDER_OPEN, "<!--")
+    updated = updated.replace(PLACEHOLDER_CLOSE, "-->")
+
     return f"{leading}{updated}"
 
 
@@ -327,6 +350,8 @@ def fix_assignment_spacing(
     state = None
     for line in content.splitlines():
         updated, state = transform_code_segments(line, state, _normalize_assignment_segment, language=language)
+        # Strip any trailing whitespace introduced when an operator sits at end-of-line
+        updated = updated.rstrip(" \t")
         if updated != line:
             changed = True
         updated_lines.append(updated)
@@ -468,6 +493,87 @@ def fix_indent_multiple_of_four(
     return join_lines(updated_lines, newline, trailing), changed, None
 
 
+def _get_context_at(line: str, pos: int, state: str | None, language: str) -> str | None:
+    quote: str | None = None
+    escaped = False
+    idx = 0
+    current_state = state
+
+    while idx <= pos and idx < len(line):
+        ch = line[idx]
+        
+        if current_state == "/*":
+            if idx + 1 < len(line) and ch == "*" and line[idx + 1] == "/":
+                idx += 2
+                current_state = None
+                continue
+            if idx == pos: return "/*"
+            idx += 1
+            continue
+        elif current_state == '"""':
+            if not escaped and idx + 2 < len(line) and line[idx:idx + 3] == '"""':
+                idx += 3
+                current_state = None
+                continue
+            if ch == "\\": escaped = not escaped
+            else: escaped = False
+            if idx == pos: return '"""'
+            idx += 1
+            continue
+        elif current_state == "'''":
+            if not escaped and idx + 2 < len(line) and line[idx:idx + 3] == "'''":
+                idx += 3
+                current_state = None
+                continue
+            if ch == "\\": escaped = not escaped
+            else: escaped = False
+            if idx == pos: return "'''"
+            idx += 1
+            continue
+            
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == quote:
+                quote = None
+            if idx == pos: return quote
+            idx += 1
+            continue
+            
+        if ch in {'"', "'", "`"}:
+            if idx + 2 < len(line) and line[idx:idx + 3] == ch * 3:
+                current_state = ch * 3
+                idx += 3
+                if idx - 1 >= pos: return current_state
+                continue
+            quote = ch
+            if idx == pos: return quote
+            idx += 1
+            continue
+            
+        if ch == "#":
+            if idx <= pos: return "#"
+            break
+            
+        if language != "python":
+            if idx + 1 < len(line) and ch == "/" and line[idx + 1] == "/":
+                if idx <= pos: return "//"
+                break
+            
+            if idx + 1 < len(line) and ch == "/" and line[idx + 1] == "*":
+                current_state = "/*"
+                idx += 2
+                if idx - 1 >= pos: return "/*"
+                continue
+            
+        if idx == pos: return None
+        idx += 1
+        
+    return None
+
+
 def _wrap_long_line(line: str, limit: int, state: str | None, language: str) -> tuple[list[str], bool, str | None]:
     if len(line) <= limit:
         return [line], False, state
@@ -485,17 +591,39 @@ def _wrap_long_line(line: str, limit: int, state: str | None, language: str) -> 
         for idx in range(min(limit, len(remaining) - 1), max(indent + 8, 0), -1):
             if remaining[idx] != " ":
                 continue
-            if idx < len(mask) and mask[idx]:
-                break_at = idx
-                break
+            break_at = idx
+            break
         if break_at == -1:
             return [line], False, state
 
-        wrapped.append(remaining[:break_at].rstrip())
-        remaining = f"{continuation_indent}{remaining[break_at + 1:].lstrip()}"
-        if not remaining.strip():
-            remaining = ""
-            break
+        ctx = _get_context_at(remaining, break_at, current_state, language)
+        
+        if ctx in {"'", '"'}:
+            # Preserve the space inside the string for valid concatenation
+            left_str = remaining[:break_at+1]
+            right_str = remaining[break_at+1:]
+            if language in {"javascript", "typescript"}:
+                wrapped.append(f"{left_str}{ctx} +")
+                remaining = f"{continuation_indent}{ctx}{right_str}"
+            elif language == "php":
+                wrapped.append(f"{left_str}{ctx} .")
+                remaining = f"{continuation_indent}{ctx}{right_str}"
+            elif language == "python":
+                wrapped.append(f"{left_str}{ctx} \\")
+                remaining = f"{continuation_indent}{ctx}{right_str}"
+            else:
+                wrapped.append(remaining[:break_at].rstrip())
+                remaining = f"{continuation_indent}{remaining[break_at + 1:].lstrip()}"
+        elif ctx == "//":
+            wrapped.append(remaining[:break_at].rstrip())
+            remaining = f"{continuation_indent}// {remaining[break_at + 1:].lstrip()}"
+        elif ctx == "#":
+            wrapped.append(remaining[:break_at].rstrip())
+            remaining = f"{continuation_indent}# {remaining[break_at + 1:].lstrip()}"
+        else:
+            wrapped.append(remaining[:break_at].rstrip())
+            remaining = f"{continuation_indent}{remaining[break_at + 1:].lstrip()}"
+            
         changed = True
 
     if remaining.strip():
@@ -510,7 +638,7 @@ def fix_max_line_length(
     language: str,
     rule: Rule,
 ) -> tuple[str, bool, str | None]:
-    limit = int(rule.value or 120)
+    limit = int(rule.value or 110)
     newline = detect_newline(content)
     trailing = had_trailing_newline(content)
     updated_lines: list[str] = []
@@ -538,7 +666,7 @@ def detect_max_line_length(
     language: str,
     rule: Rule,
 ) -> list[Violation]:
-    limit = int(rule.value or 120)
+    limit = int(rule.value or 110)
     violations: list[Violation] = []
     for line_number, line in enumerate(content.splitlines(), start=1):
         if len(line) > limit:
@@ -715,6 +843,94 @@ def detect_require_regex(
             fixable=rule.rule_id in SAFE_REGEX_FIXERS,
         )
     ]
+def detect_strict_equality(
+    relative_path: str,
+    path: Path,
+    content: str,
+    language: str,
+    rule: Rule,
+) -> list[Violation]:
+    """Detect loose equality operators (== / !=) in JS, TS, and PHP."""
+    if language not in {"javascript", "typescript", "php"}:
+        return []
+    violations: list[Violation] = []
+    # Match == or != that are NOT already === / !==
+    pattern = re.compile(r"(?<![=!])={2}(?!=)|(?<!!)!={1}(?!=)")
+    state = None
+    for line_number, line in enumerate(content.splitlines(), start=1):
+        mask, state = code_mask(line, state, language=language)
+        for match in pattern.finditer(line):
+            idx = match.start()
+            if idx < len(mask) and mask[idx]:
+                violations.append(
+                    Violation(
+                        rule_id=rule.rule_id,
+                        rule_type=rule.rule_type,
+                        path=relative_path,
+                        message=(
+                            f"Line {line_number}: use strict equality '{match.group(0)}='"
+                            f" instead of loose '{match.group(0)}'."
+                        ),
+                        line_number=line_number,
+                        fixable=True,
+                    )
+                )
+    return violations
+
+
+def fix_strict_equality(
+    relative_path: str,
+    path: Path,
+    content: str,
+    language: str,
+    rule: Rule,
+) -> tuple[str, bool, str | None]:
+    """Replace loose equality (== / !=) with strict equality (=== / !==)."""
+    if language not in {"javascript", "typescript", "php"}:
+        return content, False, None
+    newline = detect_newline(content)
+    trailing = had_trailing_newline(content)
+    changed = False
+    updated_lines: list[str] = []
+    state = None
+    for line in content.splitlines():
+        mask, state = code_mask(line, state, language=language)
+        rebuilt = _apply_strict_equality(line, mask)
+        if rebuilt != line:
+            changed = True
+        updated_lines.append(rebuilt)
+    return join_lines(updated_lines, newline, trailing), changed, None
+
+
+def _apply_strict_equality(line: str, mask: list[bool]) -> str:
+    """Replace loose == with === and != with !== in code regions only."""
+    result = []
+    idx = 0
+    while idx < len(line):
+        ch = line[idx]
+        in_code = idx < len(mask) and mask[idx]
+        # Check for loose != (not !==)
+        if in_code and ch == "!" and idx + 1 < len(line) and line[idx + 1] == "=":
+            next_after = line[idx + 2] if idx + 2 < len(line) else ""
+            if next_after != "=":
+                result.append("!=")
+                result.append("=")
+                idx += 2
+                continue
+        # Check for loose == (not ===)
+        if in_code and ch == "=" and idx + 1 < len(line) and line[idx + 1] == "=":
+            prev_char = line[idx - 1] if idx > 0 else ""
+            next_after = line[idx + 2] if idx + 2 < len(line) else ""
+            if prev_char not in ("!", "=") and next_after != "=":
+                result.append("==")
+                result.append("=")
+                idx += 2
+                continue
+        result.append(ch)
+        idx += 1
+    return "".join(result)
+
+
 def fix_regex_rule(
     relative_path: str,
     path: Path,
@@ -1083,6 +1299,7 @@ DETECTORS: dict[str, callable] = {
     "no_tabs": detect_no_tabs,
     "no_trailing_whitespace": detect_no_trailing_whitespace,
     "require_regex": detect_require_regex,
+    "strict_equality": detect_strict_equality,
 }
 
 FIXERS: dict[str, callable] = {
@@ -1095,6 +1312,7 @@ FIXERS: dict[str, callable] = {
     "no_tabs": fix_no_tabs,
     "no_trailing_whitespace": fix_no_trailing_whitespace,
     "forbid_regex": fix_regex_rule,
+    "strict_equality": fix_strict_equality,
 }
 
 
